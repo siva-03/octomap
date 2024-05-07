@@ -53,14 +53,14 @@ namespace octomath {
     /*!
      * \brief Default constructor
      */
-    Vector3 () { data[0] = data[1] = data[2] = 0.0; }
+    Vector3 () : cost_factor(0.0) { data[0] = data[1] = data[2] = 0.0; }
 
     /*!
      * \brief Copy constructor
      *
      * @param other a vector of dimension 3
      */
-    Vector3 (const Vector3& other) {
+    Vector3 (const Vector3& other) : cost_factor(other.cost_factor){
       data[0] = other(0);
       data[1] = other(1);
       data[2] = other(2);
@@ -72,7 +72,7 @@ namespace octomath {
      * Constructs a three-dimensional vector from
      * three single values x, y, z or roll, pitch, yaw
      */
-    Vector3 (float x, float y, float z) {
+    Vector3 (float x, float y, float z, float cost = 0.0) : cost_factor(cost){
       data[0] = x;
       data[1] = y;
       data[2] = z;
@@ -91,7 +91,8 @@ namespace octomath {
     inline Vector3& operator= (const Vector3& other)  {
       data[0] = other(0);
       data[1] = other(1);
-      data[2] = other(2);      
+      data[2] = other(2);
+      cost_factor = other.cost_factor;
       return *this;
     }
 
@@ -108,6 +109,8 @@ namespace octomath {
     {
       //return (data.start<3> ().cross (other.data.start<3> ()));
       // \note should this be renamed?
+
+      // The cost_factor will be zero for now. Change later if needed TODO
       return Vector3(y()*other.z() - z()*other.y(),
                      z()*other.x() - x()*other.z(),
                      x()*other.y() - y()*other.x());
@@ -141,6 +144,12 @@ namespace octomath {
     inline float& z() 
     {
       return operator()(2);
+    }
+
+    // Just a getter
+    inline float get_cost_factor() const
+    {
+      return cost_factor;
     }
 
     inline const float& x() const 
@@ -253,7 +262,7 @@ namespace octomath {
         if (operator()(i) != other(i)) 
           return false;
       }
-      return true;
+      return cost_factor == other.get_cost_factor();
     }
 
     inline bool operator< (const Vector3 &other) const {
@@ -324,7 +333,8 @@ namespace octomath {
 
   protected:
     float data[3];
-
+    float cost_factor; // This is the cost that corresponds to this point in the point cloud
+    // An alternative to adding cost_factor is data[4] -> would that have any memory advantages like faster access? TODO
   };
 
 

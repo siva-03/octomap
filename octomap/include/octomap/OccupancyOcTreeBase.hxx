@@ -74,6 +74,8 @@ namespace octomap {
 
   template <class NODE>
   void OccupancyOcTreeBase<NODE>::insertPointCloud(const ScanNode& scan, double maxrange, bool lazy_eval, bool discretize) {
+    // Please dont use this yet. Use pointClouds for now. Will update ScanNode later to add Costs TODO
+
     // performs transformation to data and sensor origin first
     Pointcloud& cloud = *(scan.scan);
     pose6d frame_origin = scan.pose;
@@ -304,17 +306,28 @@ namespace octomap {
 
 
   template <class NODE>
-  NODE* OccupancyOcTreeBase<NODE>::updateNode(const OcTreeKey& key, float log_odds_update, bool lazy_eval) {
+  NODE* OccupancyOcTreeBase<NODE>::updateNode(const OcTreeKey& key, float log_odds_update, float cost_factor, bool lazy_eval) {
     // early abort (no change will happen).
     // may cause an overhead in some configuration, but more often helps
-    NODE* leaf = this->search(key);
+
+    // NODE* leaf = this->search(key);
+
     // no change: node already at threshold
-    if (leaf
-        && ((log_odds_update >= 0 && leaf->getLogOdds() >= this->clamping_thres_max)
-        || ( log_odds_update <= 0 && leaf->getLogOdds() <= this->clamping_thres_min)))
-    {
-      return leaf;
-    }
+
+    // Cant do this anymore even with added condition where node cost and costfactor is same
+    // Because the leaf might be a pruned node with accumulated cost, so we can't check for cost equality.
+    // We should calc the leaf cost from pruned node and verify it is equal to cost_factor which is a little complicated
+    // Sacrificing on efficiency now. Come back later TODO
+    
+    // This might be a big sacrifice in case the robot moves only a little and there are a lot of common points 
+    // from the previous position. Thnk about the search vs update time complexities later TODO
+
+    // if (leaf
+    //     && ((log_odds_update >= 0 && leaf->getLogOdds() >= this->clamping_thres_max)
+    //     || ( log_odds_update <= 0 && leaf->getLogOdds() <= this->clamping_thres_min)))
+    // {
+    //   return leaf;
+    // }
 
     bool createdRoot = false;
     if (this->root == NULL){
@@ -323,7 +336,9 @@ namespace octomap {
       createdRoot = true;
     }
 
-    return updateNodeRecurs(this->root, createdRoot, key, 0, log_odds_update, lazy_eval);
+    NODE* answer = updateNodeRecurs(this->root, createdRoot, key, 0, log_odds_update, cost_factor, lazy_eval);
+    std::cout << this->root->getCostValue() << std::endl;
+    return answer;
   }
 
   template <class NODE>
@@ -332,7 +347,7 @@ namespace octomap {
     if (!this->coordToKeyChecked(value, key))
       return NULL;
 
-    return updateNode(key, log_odds_update, lazy_eval);
+    return updateNode(key, log_odds_update, value.get_cost_factor(), lazy_eval);
   }
 
   template <class NODE>
@@ -340,17 +355,17 @@ namespace octomap {
     OcTreeKey key;
     if (!this->coordToKeyChecked(x, y, z, key))
       return NULL;
-
+    // change 0.0 later
     return updateNode(key, log_odds_update, lazy_eval);
   }
 
   template <class NODE>
-  NODE* OccupancyOcTreeBase<NODE>::updateNode(const OcTreeKey& key, bool occupied, bool lazy_eval) {
+  NODE* OccupancyOcTreeBase<NODE>::updateNode(const OcTreeKey& key, bool occupied, float cost_factor, bool lazy_eval) {
     float logOdds = this->prob_miss_log;
     if (occupied)
       logOdds = this->prob_hit_log;
 
-    return updateNode(key, logOdds, lazy_eval);
+    return updateNode(key, logOdds, cost_factor, lazy_eval);
   }
 
   template <class NODE>
@@ -358,7 +373,7 @@ namespace octomap {
     OcTreeKey key;
     if (!this->coordToKeyChecked(value, key))
       return NULL;
-    return updateNode(key, occupied, lazy_eval);
+    return updateNode(key, occupied, value.get_cost_factor(), lazy_eval);
   }
 
   template <class NODE>
@@ -371,39 +386,49 @@ namespace octomap {
 
   template <class NODE>
   NODE* OccupancyOcTreeBase<NODE>::updateNodeRecurs(NODE* node, bool node_just_created, const OcTreeKey& key,
-                                                    unsigned int depth, const float& log_odds_update, bool lazy_eval) {
+                                                    unsigned int depth, const float& log_odds_update, 
+                                                    const float& cost_factor, bool lazy_eval) {
     bool created_node = false;
 
     assert(node);
 
     // follow down to last level
     if (depth < this->tree_depth) {
+      // find the pos this key should be in on the level just below the current depth
       unsigned int pos = computeChildIdx(key, this->tree_depth -1 - depth);
       if (!this->nodeChildExists(node, pos)) {
         // child does not exist, but maybe it's a pruned node?
+        // if node_just_created, it won't have any children like a pruned node but it isn't one (corner case)
         if (!this->nodeHasChildren(node) && !node_just_created ) {
           // current node does not have children AND it is not a new node
-          // -> expand pruned node
+          // -> expand pruned node putting 1/8th cost of parent in each child and same occ_prob
           this->expandNode(node);
         }
         else {
           // not a pruned node, create requested child
+          // This could be a node just created and we are adding its first child
+          // OR it could have other children with the current key area being unknown space
           this->createNodeChild(node, pos);
           created_node = true;
         }
       }
 
       if (lazy_eval)
-        return updateNodeRecurs(this->getNodeChild(node, pos), created_node, key, depth+1, log_odds_update, lazy_eval);
+        return updateNodeRecurs(this->getNodeChild(node, pos), created_node, key, depth+1, log_odds_update, 
+                                cost_factor, lazy_eval);
       else {
-        NODE* retval = updateNodeRecurs(this->getNodeChild(node, pos), created_node, key, depth+1, log_odds_update, lazy_eval);
+        NODE* retval = updateNodeRecurs(this->getNodeChild(node, pos), created_node, key, depth+1, log_odds_update, 
+                                        cost_factor, lazy_eval);
         // prune node if possible, otherwise set own probability
         // note: combining both did not lead to a speedup!
         if (this->pruneNode(node)){
           // return pointer to current parent (pruned), the just updated node no longer exists
           retval = node;
         } else{
+          // Set this node occ to max of children as atleast one child got updated.
           node->updateOccupancyChildren();
+          // Cost total recalculation
+          node->updateCostChildren();
         }
 
         return retval;
@@ -420,6 +445,8 @@ namespace octomap {
           changed_keys.insert(std::pair<OcTreeKey,bool>(key, true));
         } else if (occBefore != this->isNodeOccupied(node)) {  // occupancy changed, track it
           KeyBoolMap::iterator it = changed_keys.find(key);
+          // I didn't quite get this if and else if. The comments for changed_keys are too sparse.
+          // Are all leaves in the set with true or false? Why are they erasing? TODO
           if (it == changed_keys.end())
             changed_keys.insert(std::pair<OcTreeKey,bool>(key, false));
           else if (it->second == false)
@@ -427,6 +454,13 @@ namespace octomap {
         }
       } else {
         updateNodeLogOdds(node, log_odds_update);
+      }
+      // Update the cost to cost_factor only if it is fully occupied for now TODO
+      if (this->isNodeOccupied(node)){
+        node->setCostValue((double)cost_factor);
+      }
+      else {
+        node->setCostValue(0.0);
       }
       return node;
     }
@@ -1095,7 +1129,9 @@ namespace octomap {
 
   template <class NODE>
   void OccupancyOcTreeBase<NODE>::updateNodeLogOdds(NODE* occupancyNode, const float& update) const {
-    occupancyNode->addValue(update);
+    
+    // Now addValue() changed to addOccValue()
+    occupancyNode->addOccValue(update);
     if (occupancyNode->getLogOdds() < this->clamping_thres_min) {
       occupancyNode->setLogOdds(this->clamping_thres_min);
       return;

@@ -213,7 +213,8 @@ namespace octomap {
   template <class NODE,class I>
   bool OcTreeBaseImpl<NODE,I>::isNodeCollapsible(const NODE* node) const{
     // all children must exist, must not have children of
-    // their own and have the same occupancy probability
+    // their own and have the same occupancy probability and cost value
+    // Consider replacing == with doubleEquals() with some tolerance in OcTreeDataNode.h if nothing is collapsible
     if (!nodeChildExists(node, 0))
       return false;
 
@@ -260,6 +261,8 @@ namespace octomap {
     for (unsigned int k=0; k<8; k++) {
       NODE* newNode = createNodeChild(node, k);
       newNode->copyData(*node);
+      // copyData puts the cost, occ_prob of parent in each child which is wrong, instead distribute cost equally
+      newNode->setCostValue(node->getCostValue() / 8);
     }
   }
 
@@ -269,8 +272,12 @@ namespace octomap {
     if (!isNodeCollapsible(node))
       return false;
 
-    // set value to children's values (all assumed equal)
+    // set occ log value to children's values (all assumed equal)
     node->copyData(*(getNodeChild(node, 0)));
+
+    // But copyData writes child one cost value to parent instead of cost*8.
+    // Or could use getTotalChildCosts() from OcTreeNode.h since all 8 children must exist and have equal costs
+    node->setCostValue(getNodeChild(node, 0)->getCostValue() * 8);
 
     // delete children (known to be leafs at this point!)
     for (unsigned int i=0;i<8;i++) {
@@ -458,7 +465,7 @@ namespace octomap {
         curNode = getNodeChild(curNode, pos);
       } else {
         // we expected a child but did not get it
-        // is the current node a leaf already?
+        // is the current node a leaf already? // A pruned node is a leaf
         if (!nodeHasChildren(curNode)) { // TODO similar check to nodeChildExists?
           return curNode;
         } else {
@@ -684,6 +691,8 @@ namespace octomap {
 
     assert(node);
 
+    // we usually call this function with (treedepth - depth) but since we want the pos of this key in the 
+    // level just below the current node level, we have -1
     unsigned int pos = computeChildIdx(key, this->tree_depth-1-depth);
 
     if (!nodeChildExists(node, pos)) {
@@ -706,9 +715,11 @@ namespace octomap {
       this->deleteNodeChild(node, pos);
 
       if (!nodeHasChildren(node))
-        return true;
+        return true; // This means node has no children after deletion of pos child, so delete this node too on way up
       else{
+        // Some more children remaining, but since we deleted, update the parent values according to children values.
         node->updateOccupancyChildren(); // TODO: occupancy?
+        node->updateCostChildren(); // update the cost of this node, since one child is deleted
       }
     }
     // node did not lose a child, or still has other children
@@ -860,7 +871,7 @@ namespace octomap {
     // Note: this can be larger than the adressable memory
     //   - size_t may not be enough to hold it!
     return (unsigned long long)((size_x/resolution) * (size_y/resolution) * (size_z/resolution)
-        * sizeof(root->getValue()));
+        * (sizeof(root->getOccValue()) + sizeof(root->getCostValue())));
 
   }
 

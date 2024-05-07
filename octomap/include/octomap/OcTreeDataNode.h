@@ -53,6 +53,7 @@ namespace octomap {
    * This is the base class for nodes used in an OcTree. The used implementation
    * for occupancy mapping is in OcTreeNode.#
    * \tparam T data to be stored in the node (e.g. a float for probabilities)
+   * \tparam U data to be stored in the node (e.g. a double for costs)
    * 
    * Note: If you derive a class (directly or indirectly) from OcTreeDataNode, 
    * you have to implement (at least) the following functions to avoid slicing
@@ -60,14 +61,14 @@ namespace octomap {
    * createChild(), getChild(), getChild() const, expandNode() 
    * See ColorOcTreeNode in ColorOcTree.h for an example. 
    */
-  template<typename T> class OcTreeDataNode: public AbstractOcTreeNode {
+  template<typename T, typename U> class OcTreeDataNode: public AbstractOcTreeNode {
     template<typename NODE, typename I>
     friend class OcTreeBaseImpl;
 
   public:
 
     OcTreeDataNode();
-    OcTreeDataNode(T initVal);
+    OcTreeDataNode(T initOccVal, U initCostVal);
     
     /// Copy constructor, performs a recursive deep-copy of all children 
     /// including node data in "value"
@@ -99,10 +100,14 @@ namespace octomap {
     /// \return true if the node has at least one child
     OCTOMAP_DEPRECATED(bool hasChildren() const);
 
-    /// @return value stored in the node
-    T getValue() const{return value;}
-    /// sets value to be stored in the node
-    void setValue(T v) {value = v;}
+    /// @return occ value stored in the node
+    T getOccValue() const{return occ_val;}
+    /// @return cost value stored in the node
+    U getCostValue() const{return cost_val;}
+    /// sets occ value to be stored in the node
+    void setOccValue(T v) {occ_val = v;}
+    /// sets cost value to be stored in the node
+    void setCostValue(U v) {cost_val = v;}
 
     // file IO:
 
@@ -114,7 +119,8 @@ namespace octomap {
 
 
     /// Make the templated data type available from the outside
-    typedef T DataType;
+    typedef T OccDataType;
+    typedef U CostDataType;
 
 
   protected:
@@ -125,7 +131,8 @@ namespace octomap {
     /// The children of a node are always enforced to be the same type as the node
     AbstractOcTreeNode** children;
     /// stored data (payload)
-    T value;
+    T occ_val; // occup log value
+    U cost_val; // accumulated cost of children OR (occ log * cost of a point in point cloud) in case of leaf
 
   };
 

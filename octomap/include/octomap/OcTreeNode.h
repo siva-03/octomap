@@ -52,7 +52,7 @@ namespace octomap {
    * See ColorOcTreeNode in ColorOcTree.h for an example.
    *
    */
-  class OcTreeNode : public OcTreeDataNode<float> {
+  class OcTreeNode : public OcTreeDataNode<float, double> {
 
   public:
     OcTreeNode();
@@ -62,12 +62,17 @@ namespace octomap {
     // -- node occupancy  ----------------------------
 
     /// \return occupancy probability of node
-    inline double getOccupancy() const { return probability(value); }
+    inline double getOccupancy() const { return probability(occ_val); }
+
+    /// \return cost of a node
+    inline double getCost() const { return cost_val; }
 
     /// \return log odds representation of occupancy probability of node
-    inline float getLogOdds() const{ return value; }
+    inline float getLogOdds() const{ return occ_val; }
     /// sets log odds occupancy of node
-    inline void setLogOdds(float l) { value = l; }
+    inline void setLogOdds(float l) { occ_val = l; }
+    /// sets cost of node
+    inline void setCost(double l) { cost_val = l; }
 
     /**
      * @return mean of all children's occupancy probabilities, in log odds
@@ -79,14 +84,39 @@ namespace octomap {
      */
     float getMaxChildLogOdds() const;
 
+    /**
+     * @return mean of all children's costs
+     */
+    double getMeanChildCosts() const;
+
+    /**
+     * @return maximum of children's costs
+     */
+    double getMaxChildCosts() const;
+
+    /**
+     * @return total of children's costs
+     */
+    double getTotalChildCosts() const;
+
     /// update this node's occupancy according to its children's maximum occupancy
     inline void updateOccupancyChildren() {
-      this->setLogOdds(this->getMaxChildLogOdds());  // conservative
+      this->setLogOdds(this->getMaxChildLogOdds());  // conservative occ
+    }
+
+    /// update this node's cost according to its children's (max or total)? cost
+    inline void updateCostChildren() {
+      this->setCost(this->getTotalChildCosts());  // putting total as of now - change as necessary TODO
     }
 
     /// adds p to the node's logOdds value (with no boundary / threshold checking!)
-    void addValue(const float& p);
+    void addOccValue(const float& p);
+
+    /// adds c to the node's cost value (with no boundary / threshold checking!)
+    /// no sure if this is really necessary
+    void addCostValue(const double& c);
     
+    void setCostValue(const double& c);
 
   protected:
     // "value" stores log odds occupancy probability

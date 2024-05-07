@@ -208,7 +208,7 @@ int main(int /*argc*/, char** /*argv*/) {
       EXPECT_TRUE(newNodeCreated != NULL);
       EXPECT_TRUE(tree.nodeChildExists(parentNode, 0));
       const float value = 0.123f;
-      newNodeCreated->setValue(value);
+      newNodeCreated->setOccValue(value);
       tree.write("pruning_test_edited.ot");
       
       EXPECT_EQ(tree.size(), tree.calcNumNodes());

@@ -71,6 +71,7 @@ namespace octomath {
     s >> temp; // should be 3
     for (unsigned int i=0; i<3; i++)
       s >> operator()(i);
+    s >> cost_factor;
     return s;
   }
 
@@ -79,6 +80,7 @@ namespace octomath {
     s << 3;
     for (unsigned int i=0; i<3; i++)
       s << " " << operator()(i);
+    s << " " << cost_factor;
     return s;
   }
 
@@ -92,6 +94,8 @@ namespace octomath {
       s.read((char*)&val, sizeof(val));
       operator()(i) = (float) val;
     }
+    s.read((char*)&val, sizeof(val));
+    cost_factor = (float) val;
     return s;
   }
 
@@ -104,12 +108,14 @@ namespace octomath {
       val = operator()(i);
       s.write((char*)&val, sizeof(val));
     }
+    val = cost_factor;
+    s.write((char*)&val, sizeof(val));
     return s;
   }
 
 
   std::ostream& operator<<(std::ostream& out, octomath::Vector3 const& v) {
-    return out << '(' << v.x() << ' ' << v.y() << ' ' << v.z() << ')';
+    return out << '(' << v.x() << ' ' << v.y() << ' ' << v.z() << ' ' << v.get_cost_factor() << ')';
   }
 
 }

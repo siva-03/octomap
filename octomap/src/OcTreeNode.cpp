@@ -39,11 +39,12 @@
 #include <inttypes.h>
 
 #include <octomap/OcTreeNode.h>
+// #include "OcTreeNode.h"
 
 namespace octomap {
 
   OcTreeNode::OcTreeNode()
-    : OcTreeDataNode<float>(0.0)
+    : OcTreeDataNode<float, double>(0.0, 0.0)
   {
   }
 
@@ -88,10 +89,72 @@ namespace octomap {
     return max;
   }
 
-  void OcTreeNode::addValue(const float& logOdds) {
-    value += logOdds;
+  double OcTreeNode::getMeanChildCosts() const
+  {
+    double mean = 0;
+    uint8_t c = 0;
+    if (children != NULL)
+    {
+        for (unsigned int i = 0; i < 8; i++)
+        {
+            if (children[i] != NULL)
+            {
+                mean += static_cast<OcTreeNode *>(children[i])->getCost(); // TODO check if works generally
+                ++c;
+            }
+        }
+    }
+
+    if (c > 0)
+        mean /= (double)c;
+
+    return mean;
   }
-  
+
+  double OcTreeNode::getMaxChildCosts() const{
+    double max = -std::numeric_limits<double>::max();
+    
+    if (children !=NULL){
+      for (unsigned int i=0; i<8; i++) {
+        if (children[i] != NULL) {
+          double c = static_cast<OcTreeNode*>(children[i])->getCost(); // TODO check if works generally
+          if (c > max)
+            max = c;
+        }
+      }
+    }
+    return max;
+  }
+
+  double OcTreeNode::getTotalChildCosts() const{
+    double total = 0.0;
+    if (children != NULL)
+    {
+        for (unsigned int i = 0; i < 8; i++)
+        {
+            if (children[i] != NULL)
+            {
+                // Could use getCostValue() instead of this
+                total += static_cast<OcTreeNode *>(children[i])->getCost(); // TODO check if works generally
+            }
+        }
+    }
+
+    return total;
+  }
+
+  void OcTreeNode::addOccValue(const float& logOdds) {
+    occ_val += logOdds;
+  }
+
+  void OcTreeNode::addCostValue(const double &c){
+    cost_val += c;
+  }
+
+  void OcTreeNode::setCostValue(const double &c){
+    cost_val = c;
+  }
+
 } // end namespace
 
 

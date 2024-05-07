@@ -33,50 +33,56 @@
 
 namespace octomap {
 
-  template <typename T>
-  OcTreeDataNode<T>::OcTreeDataNode()
+  template <typename T, typename U>
+  OcTreeDataNode<T, U>::OcTreeDataNode()
    : children(NULL)
   {
 
   }
 
-  template <typename T>
-  OcTreeDataNode<T>::OcTreeDataNode(T initVal)
-   : children(NULL), value(initVal)
+  template <typename T, typename U>
+  OcTreeDataNode<T, U>::OcTreeDataNode(T initOccVal, U initCostVal)
+   : children(NULL), occ_val(initOccVal), cost_val(initCostVal)
   {
 
   }
 
-  template <typename T>
-  OcTreeDataNode<T>::OcTreeDataNode(const OcTreeDataNode<T>& rhs)
-   : children(NULL), value(rhs.value)
+  template <typename T, typename U>
+  OcTreeDataNode<T, U>::OcTreeDataNode(const OcTreeDataNode<T, U>& rhs)
+   : children(NULL), occ_val(rhs.occ_val), cost_val(rhs.cost_val)
   {
     if (rhs.children != NULL){
       allocChildren();
       for (unsigned i = 0; i<8; ++i){
         if (rhs.children[i] != NULL)
-          children[i] = new OcTreeDataNode<T>(*(static_cast<OcTreeDataNode<T>*>(rhs.children[i])));
+          children[i] = new OcTreeDataNode<T, U>(*(static_cast<OcTreeDataNode<T, U>*>(rhs.children[i])));
 
       }
     }
   }
   
-  template <typename T>
-  OcTreeDataNode<T>::~OcTreeDataNode()
+  template <typename T, typename U>
+  OcTreeDataNode<T, U>::~OcTreeDataNode()
   {
     // Delete only own members. OcTree maintains tree structure and must have deleted 
     // children already
     assert(children == NULL);
   }
   
-  template <typename T>
-  void OcTreeDataNode<T>::copyData(const OcTreeDataNode<T>& from){
-    value = from.value;     
+  template <typename T, typename U>
+  void OcTreeDataNode<T, U>::copyData(const OcTreeDataNode<T, U>& from){
+    occ_val = from.occ_val;
+    cost_val = from.cost_val;
   }
 
-  template <typename T>
-  bool OcTreeDataNode<T>::operator== (const OcTreeDataNode<T>& rhs) const{
-    return rhs.value == value;
+  template <typename T, typename U>
+  bool OcTreeDataNode<T, U>::operator== (const OcTreeDataNode<T, U>& rhs) const{
+    // rhs.cost_val == cost_val
+    // Since costs have no min_max clamps, equality check should probably be performed
+    // using a custom doubleEquals(a, b, epsilon) function instead of ==
+
+    // But == might work too depending on the symmetricity of costs. TODO
+    return rhs.occ_val == occ_val && rhs.cost_val == cost_val;
   }
 
   // ============================================================
@@ -84,8 +90,8 @@ namespace octomap {
   // ============================================================
 
 
-  template <typename T>
-  bool OcTreeDataNode<T>::childExists(unsigned int i) const {
+  template <typename T, typename U>
+  bool OcTreeDataNode<T, U>::childExists(unsigned int i) const {
     assert(i < 8);
     if ((children != NULL) && (children[i] != NULL))
       return true;
@@ -93,8 +99,8 @@ namespace octomap {
       return false;
   }
   
-  template <typename T>
-  bool OcTreeDataNode<T>::hasChildren() const {
+  template <typename T, typename U>
+  bool OcTreeDataNode<T, U>::hasChildren() const {
     if (children == NULL)
       return false;
     for (unsigned int i = 0; i<8; i++){
@@ -110,16 +116,18 @@ namespace octomap {
   // =  File IO           =======================================
   // ============================================================
 
-  template <typename T>
-  std::istream& OcTreeDataNode<T>::readData(std::istream &s) {
-    s.read((char*) &value, sizeof(value));
+  template <typename T, typename U>
+  std::istream& OcTreeDataNode<T, U>::readData(std::istream &s) {
+    s.read((char*) &occ_val, sizeof(occ_val));
+    s.read((char*) &cost_val, sizeof(cost_val));
     return s;
   }
 
 
-  template <typename T>
-  std::ostream& OcTreeDataNode<T>::writeData(std::ostream &s) const{
-    s.write((const char*) &value, sizeof(value));
+  template <typename T, typename U>
+  std::ostream& OcTreeDataNode<T, U>::writeData(std::ostream &s) const{
+    s.write((const char*) &occ_val, sizeof(occ_val));
+    s.write((const char*) &cost_val, sizeof(cost_val));
     return s;
   }
 
@@ -127,8 +135,8 @@ namespace octomap {
   // ============================================================
   // =  private methodes  =======================================
   // ============================================================
-  template <typename T>
-  void OcTreeDataNode<T>::allocChildren() {
+  template <typename T, typename U>
+  void OcTreeDataNode<T, U>::allocChildren() {
     children = new AbstractOcTreeNode*[8];
     for (unsigned int i=0; i<8; i++) {
       children[i] = NULL;

@@ -38,14 +38,14 @@ namespace octomap {
 
   // node implementation  --------------------------------------
   std::ostream& ColorOcTreeNode::writeData(std::ostream &s) const {
-    s.write((const char*) &value, sizeof(value)); // occupancy
+    s.write((const char*) &occ_val, sizeof(occ_val)); // occupancy
     s.write((const char*) &color, sizeof(Color)); // color
 
     return s;
   }
 
   std::istream& ColorOcTreeNode::readData(std::istream &s) {
-    s.read((char*) &value, sizeof(value)); // occupancy
+    s.read((char*) &occ_val, sizeof(occ_val)); // occupancy
     s.read((char*) &color, sizeof(Color)); // color
 
     return s;
@@ -136,7 +136,7 @@ namespace octomap {
 
     for (unsigned int i = 1; i<8; i++) {
       // compare nodes only using their occupancy, ignoring color for pruning
-      if (!nodeChildExists(node, i) || nodeHasChildren(getNodeChild(node, i)) || !(getNodeChild(node, i)->getValue() == firstChild->getValue()))
+      if (!nodeChildExists(node, i) || nodeHasChildren(getNodeChild(node, i)) || !(getNodeChild(node, i)->getOccValue() == firstChild->getOccValue()))
         return false;
     }
 

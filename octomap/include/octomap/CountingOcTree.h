@@ -50,16 +50,16 @@ namespace octomap {
    * \note In our mapping system this data structure is used in
    *       CountingOcTree in the sensor model only
    */
-  class CountingOcTreeNode : public OcTreeDataNode<unsigned int> {
+  class CountingOcTreeNode : public OcTreeDataNode<unsigned int, double> {
 
   public:
 
     CountingOcTreeNode();
     ~CountingOcTreeNode();
     
-    inline unsigned int getCount() const { return getValue(); }
-    inline void increaseCount() { value++; }
-    inline void setCount(unsigned c) {this->setValue(c); }
+    inline unsigned int getCount() const { return getOccValue(); }
+    inline void increaseCount() { occ_val++; }
+    inline void setCount(unsigned c) {this->setOccValue(c); }
 
   };
 

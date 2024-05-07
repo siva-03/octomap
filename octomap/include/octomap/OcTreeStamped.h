@@ -50,7 +50,7 @@ namespace octomap {
     OcTreeNodeStamped(const OcTreeNodeStamped& rhs) : OcTreeNode(rhs), timestamp(rhs.timestamp) {}
 
     bool operator==(const OcTreeNodeStamped& rhs) const{
-      return (rhs.value == value && rhs.timestamp == timestamp);
+      return (rhs.occ_val == occ_val && rhs.timestamp == timestamp);
     }
 
     void copyData(const OcTreeNodeStamped& from){

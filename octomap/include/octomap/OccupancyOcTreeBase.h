@@ -193,7 +193,7 @@ namespace octomap {
       *   This speeds up the insertion, but you need to call updateInnerOccupancy() when done.
       * @return pointer to the updated NODE
       */
-     virtual NODE* updateNode(const OcTreeKey& key, float log_odds_update, bool lazy_eval = false);
+     virtual NODE* updateNode(const OcTreeKey& key, float log_odds_update, float cost_factor = 0.0,  bool lazy_eval = false);
 
      /**
       * Manipulate log_odds value of a voxel by changing it by log_odds_update (relative).
@@ -230,7 +230,7 @@ namespace octomap {
      *   This speeds up the insertion, but you need to call updateInnerOccupancy() when done.
      * @return pointer to the updated NODE
      */
-    virtual NODE* updateNode(const OcTreeKey& key, bool occupied, bool lazy_eval = false);
+    virtual NODE* updateNode(const OcTreeKey& key, bool occupied, float cost_factor = 0.0, bool lazy_eval = false);
 
     /**
      * Integrate occupancy measurement.
@@ -477,7 +477,7 @@ namespace octomap {
     // recursive calls ----------------------------
 
     NODE* updateNodeRecurs(NODE* node, bool node_just_created, const OcTreeKey& key,
-                           unsigned int depth, const float& log_odds_update, bool lazy_eval = false);
+                           unsigned int depth, const float& log_odds_update, const float& cost_factor = 0.0, bool lazy_eval = false);
     
     NODE* setNodeValueRecurs(NODE* node, bool node_just_created, const OcTreeKey& key,
                            unsigned int depth, const float& log_odds_value, bool lazy_eval = false);
