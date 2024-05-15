@@ -1,3 +1,7 @@
+NOTE:
+===========================================================================
+This repo aims to extend the capabilities of OctoMap while also making it simple to understand. Read the OctoMap_report.pdf to better understand OctoMap's core functionality using intuitive diagrams.
+
 OctoMap - An Efficient Probabilistic 3D Mapping Framework Based on Octrees.
 ===========================================================================
 
