@@ -383,6 +383,7 @@ namespace octomap {
     void computeUpdate(const Pointcloud& scan, const octomap::point3d& origin,
                        KeySet& free_cells,
                        KeySet& occupied_cells,
+                       KeyFloatMap& occupied_cells_to_costs,
                        double maxrange);
 
 
@@ -401,6 +402,7 @@ namespace octomap {
     void computeDiscreteUpdate(const Pointcloud& scan, const octomap::point3d& origin,
                        KeySet& free_cells,
                        KeySet& occupied_cells,
+                       KeyFloatMap& occupied_cells_to_costs,
                        double maxrange);
 
 

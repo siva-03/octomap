@@ -135,6 +135,13 @@ namespace octomap {
    */
   typedef unordered_ns::unordered_map<OcTreeKey, bool, OcTreeKey::KeyHash> KeyBoolMap;
 
+  /**
+   * Data structrure to efficiently store the costs of nodes
+   * OcTreeKeys and a float cost (these nodes are the end of the rays that are occupied)
+   * The free cells don't need costs but the occupied ones do
+   */
+  typedef unordered_ns::unordered_map<OcTreeKey, float, OcTreeKey::KeyHash> KeyFloatMap;
+
 
   class KeyRay {
   public:

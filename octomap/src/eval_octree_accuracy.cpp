@@ -147,7 +147,8 @@ int main(int argc, char** argv) {
       point3d origin = frame_origin.transform(sensor_origin);
 
       KeySet free_cells, occupied_cells;
-      tree->computeUpdate(scan, origin, free_cells, occupied_cells, maxrange);
+      KeyFloatMap occupied_cells_to_costs;
+      tree->computeUpdate(scan, origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
 
       num_points += scan.size();
 

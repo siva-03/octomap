@@ -128,11 +128,23 @@ int main(int /*argc*/, char** /*argv*/) {
 
     //tree.write("pruning_test_out1.ot");
 
-    for (int i=0; i<1; i++){
-      tree.updateNode(point3d(163.84,163.84,163.84, 2), true);
-      tree.updateNode(point3d(-163.84,-163.84,-163.84, 3), true);
-      tree.updateNode(point3d(-16.84,63.84,-13.84, 5), true); // Expect 10 cost on terminal
+    Pointcloud discretePC;
+
+    discretePC.push_back(point3d(163.84,163.84,163.84, 2));
+    discretePC.push_back(point3d(-163.84,-163.84,-163.84, 3));
+    discretePC.push_back(point3d(-16.84,63.84,-13.84, 5));
+
+    // for (int i=0; i<20; i++){
+    //   tree.updateNode(point3d(163.84,163.84,163.84, 2), true);
+    //   tree.updateNode(point3d(-163.84,-163.84,-163.84, 3), true);
+    //   tree.updateNode(point3d(-16.84,63.84,-13.84, 5), true); // Expect 10 cost on terminal
+    // }
+
+    // test with discretize to see if cost retaining is working
+    for (int i=0; i<20; i++){
+      tree.insertPointCloud(discretePC, point3d(0, 0, 0), -1, false, true); // Expect 10 cost on terminal
     }
+    
 
     // EXPECT_EQ(2, )
 

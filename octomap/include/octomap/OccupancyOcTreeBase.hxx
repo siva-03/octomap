@@ -87,19 +87,25 @@ namespace octomap {
   template <class NODE>
   void OccupancyOcTreeBase<NODE>::insertPointCloud(const Pointcloud& scan, const octomap::point3d& sensor_origin,
                                              double maxrange, bool lazy_eval, bool discretize) {
-
+                                            
     KeySet free_cells, occupied_cells;
+    KeyFloatMap occupied_cells_to_costs;
     if (discretize)
-      computeDiscreteUpdate(scan, sensor_origin, free_cells, occupied_cells, maxrange);
+      computeDiscreteUpdate(scan, sensor_origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
     else
-      computeUpdate(scan, sensor_origin, free_cells, occupied_cells, maxrange);
+      computeUpdate(scan, sensor_origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
 
     // insert data into tree  -----------------------
     for (KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it) {
-      updateNode(*it, false, lazy_eval);
+      //std::cout << "In free cells update" << std::endl;
+      updateNode(*it, false, 0.0, lazy_eval);
     }
     for (KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it) {
-      updateNode(*it, true, lazy_eval);
+      //std::cout << "In occ update" << std::endl;
+      KeyFloatMap::iterator it_map = occupied_cells_to_costs.find(*it);
+      assert(it_map != occupied_cells_to_costs.end() && "Key in occupied_cells can't be found in occupied_cells_to_cost. Check and correct insertPointCloud.");
+
+      updateNode(*it, true, it_map->second, lazy_eval);
     }
   }
 
@@ -148,7 +154,7 @@ namespace octomap {
 
  template <class NODE>
  void OccupancyOcTreeBase<NODE>::computeDiscreteUpdate(const Pointcloud& scan, const octomap::point3d& origin,
-                                               KeySet& free_cells, KeySet& occupied_cells,
+                                               KeySet& free_cells, KeySet& occupied_cells, KeyFloatMap& occupied_cells_to_costs,
                                                double maxrange)
 {
   Pointcloud discretePC;
@@ -171,14 +177,14 @@ namespace octomap {
   }
 
 
-  computeUpdate(discretePC, origin, free_cells, occupied_cells, maxrange);
+  computeUpdate(discretePC, origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
 }
 
 
 
   template <class NODE>
   void OccupancyOcTreeBase<NODE>::computeUpdate(const Pointcloud& scan, const octomap::point3d& origin,
-                                                KeySet& free_cells, KeySet& occupied_cells,
+                                                KeySet& free_cells, KeySet& occupied_cells, KeyFloatMap& occupied_cells_to_costs,
                                                 double maxrange)
   {
 
@@ -216,6 +222,10 @@ namespace octomap {
 #endif
             {
               occupied_cells.insert(key);
+              // Every occupied key cost has to be stored to be sent to updateNode later
+              // Not getting rid of occupied_cells right now but can be removed later 
+              // because it is rendered redundant after the occupied_Cells_to_costs- Siva TODO
+              occupied_cells_to_costs.insert(std::pair<OcTreeKey,float>(key, p.get_cost_factor()));
             }
           }
         } else { // user set a maxrange and length is above
@@ -242,6 +252,7 @@ namespace octomap {
 #endif
             {
               occupied_cells.insert(key);
+              occupied_cells_to_costs.insert(std::pair<OcTreeKey,float>(key, p.get_cost_factor()));
             }
           }
         } // end if in BBX and not maxrange
@@ -346,7 +357,7 @@ namespace octomap {
     }
 
     NODE* answer = updateNodeRecurs(this->root, createdRoot, key, 0, log_odds_update, cost_factor, lazy_eval);
-    std::cout << this->root->getCostValue() << std::endl;
+    std::cout << "Root cost value is " << this->root->getCostValue() << std::endl;
     return answer;
   }
 
