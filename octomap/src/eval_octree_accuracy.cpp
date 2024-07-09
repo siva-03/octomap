@@ -146,9 +146,9 @@ int main(int argc, char** argv) {
       scan.transform(frame_origin);
       point3d origin = frame_origin.transform(sensor_origin);
 
-      KeySet free_cells, occupied_cells;
+      KeySet free_cells;
       KeyFloatMap occupied_cells_to_costs;
-      tree->computeUpdate(scan, origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
+      tree->computeUpdate(scan, origin, free_cells, occupied_cells_to_costs, maxrange);
 
       num_points += scan.size();
 
@@ -163,8 +163,8 @@ int main(int argc, char** argv) {
         } else
           num_voxels_unknown++;
       } // count occupied cells
-      for (KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it) {
-        OcTreeNode* n = tree->search(*it);
+      for (KeyFloatMap::iterator it = occupied_cells_to_costs.begin(); it != occupied_cells_to_costs.end(); ++it) {
+        OcTreeNode* n = tree->search(it->first);
         if (n){
           if (tree->isNodeOccupied(n))
             num_voxels_correct++;

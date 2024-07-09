@@ -88,24 +88,22 @@ namespace octomap {
   void OccupancyOcTreeBase<NODE>::insertPointCloud(const Pointcloud& scan, const octomap::point3d& sensor_origin,
                                              double maxrange, bool lazy_eval, bool discretize) {
                                             
-    KeySet free_cells, occupied_cells;
+    KeySet free_cells;
     KeyFloatMap occupied_cells_to_costs;
     if (discretize)
-      computeDiscreteUpdate(scan, sensor_origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
+      computeDiscreteUpdate(scan, sensor_origin, free_cells, occupied_cells_to_costs, maxrange);
     else
-      computeUpdate(scan, sensor_origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
+      computeUpdate(scan, sensor_origin, free_cells, occupied_cells_to_costs, maxrange);
 
     // insert data into tree  -----------------------
     for (KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it) {
       //std::cout << "In free cells update" << std::endl;
       updateNode(*it, false, 0.0, lazy_eval);
     }
-    for (KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it) {
+    for (KeyFloatMap::iterator it = occupied_cells_to_costs.begin(); it != occupied_cells_to_costs.end(); ++it) {
       //std::cout << "In occ update" << std::endl;
-      KeyFloatMap::iterator it_map = occupied_cells_to_costs.find(*it);
-      assert(it_map != occupied_cells_to_costs.end() && "Key in occupied_cells can't be found in occupied_cells_to_cost. Check and correct insertPointCloud.");
 
-      updateNode(*it, true, it_map->second, lazy_eval);
+      updateNode(it->first, true, it->second, lazy_eval);
     }
   }
 
@@ -154,7 +152,7 @@ namespace octomap {
 
  template <class NODE>
  void OccupancyOcTreeBase<NODE>::computeDiscreteUpdate(const Pointcloud& scan, const octomap::point3d& origin,
-                                               KeySet& free_cells, KeySet& occupied_cells, KeyFloatMap& occupied_cells_to_costs,
+                                               KeySet& free_cells, KeyFloatMap& occupied_cells_to_costs,
                                                double maxrange)
 {
   Pointcloud discretePC;
@@ -177,14 +175,14 @@ namespace octomap {
   }
 
 
-  computeUpdate(discretePC, origin, free_cells, occupied_cells, occupied_cells_to_costs, maxrange);
+  computeUpdate(discretePC, origin, free_cells, occupied_cells_to_costs, maxrange);
 }
 
 
 
   template <class NODE>
   void OccupancyOcTreeBase<NODE>::computeUpdate(const Pointcloud& scan, const octomap::point3d& origin,
-                                                KeySet& free_cells, KeySet& occupied_cells, KeyFloatMap& occupied_cells_to_costs,
+                                                KeySet& free_cells, KeyFloatMap& occupied_cells_to_costs,
                                                 double maxrange)
   {
 
@@ -221,10 +219,8 @@ namespace octomap {
             #pragma omp critical (occupied_insert)
 #endif
             {
-              occupied_cells.insert(key);
-              // Every occupied key cost has to be stored to be sent to updateNode later
-              // Not getting rid of occupied_cells right now but can be removed later 
-              // because it is rendered redundant after the occupied_Cells_to_costs- Siva TODO
+              // Replaced occupied_cells.insert(key) with below, to retain the costs
+              // Got rid of occupied_cells for memory efficiency
               occupied_cells_to_costs.insert(std::pair<OcTreeKey,float>(key, p.get_cost_factor()));
             }
           }
@@ -251,7 +247,7 @@ namespace octomap {
             #pragma omp critical (occupied_insert)
 #endif
             {
-              occupied_cells.insert(key);
+              //occupied_cells.insert(key);
               occupied_cells_to_costs.insert(std::pair<OcTreeKey,float>(key, p.get_cost_factor()));
             }
           }
@@ -283,7 +279,7 @@ namespace octomap {
 
     // prefer occupied cells over free ones (and make sets disjunct)
     for(KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; ){
-      if (occupied_cells.find(*it) != occupied_cells.end()){
+      if (occupied_cells_to_costs.find(*it) != occupied_cells_to_costs.end()){
         it = free_cells.erase(it);
       } else {
         ++it;
@@ -337,7 +333,7 @@ namespace octomap {
     // Cant do this anymore even with added condition where node cost and costfactor is same
     // Because the leaf might be a pruned node with accumulated cost, so we can't check for cost equality.
     // We should calc the leaf cost from pruned node and verify it is equal to cost_factor which is a little complicated
-    // Sacrificing on efficiency now. Come back later TODO
+    // Sacrificing on efficiency now. Come back later - Siva TODO
     
     // This might be a big sacrifice in case the robot moves only a little and there are a lot of common points 
     // from the previous position. Thnk about the search vs update time complexities later TODO
