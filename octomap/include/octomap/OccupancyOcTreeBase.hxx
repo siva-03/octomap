@@ -146,25 +146,34 @@ namespace octomap {
     }
   }
 
-  template <class NODE>
-  void OccupancyOcTreeBase<NODE>::computeDiscreteUpdate(const Pointcloud& scan, const octomap::point3d& origin,
-                                                KeySet& free_cells, KeySet& occupied_cells,
-                                                double maxrange)
- {
-   Pointcloud discretePC;
-   discretePC.reserve(scan.size());
-   KeySet endpoints;
+ template <class NODE>
+ void OccupancyOcTreeBase<NODE>::computeDiscreteUpdate(const Pointcloud& scan, const octomap::point3d& origin,
+                                               KeySet& free_cells, KeySet& occupied_cells,
+                                               double maxrange)
+{
+  Pointcloud discretePC;
+  discretePC.reserve(scan.size());
+  KeySet endpoints;
 
-   for (int i = 0; i < (int)scan.size(); ++i) {
-     OcTreeKey k = this->coordToKey(scan[i]);
-     std::pair<KeySet::iterator,bool> ret = endpoints.insert(k);
-     if (ret.second){ // insertion took place => k was not in set
-       discretePC.push_back(this->keyToCoord(k));
-     }
-   }
 
-   computeUpdate(discretePC, origin, free_cells, occupied_cells, maxrange);
- }
+  for (int i = 0; i < (int)scan.size(); ++i) {
+    OcTreeKey k = this->coordToKey(scan[i]);
+    std::pair<KeySet::iterator,bool> ret = endpoints.insert(k);
+    if (ret.second){ // insertion took place => k was not in set
+     // push_back(this->ketToCoord(k)) makes it lose the cost value that comes with the scan[i]
+     // Modifying code below to retain that value
+
+
+     point3d updated_discrete_point = this->keyToCoord(k); // Cost is 0 - lost in key <-> coord conversions
+     updated_discrete_point.set_cost_factor(scan[i].get_cost_factor()); // retain the cost
+     discretePC.push_back(updated_discrete_point);
+    }
+  }
+
+
+  computeUpdate(discretePC, origin, free_cells, occupied_cells, maxrange);
+}
+
 
 
   template <class NODE>

@@ -146,11 +146,23 @@ namespace octomath {
       return operator()(2);
     }
 
-    // Just a getter
-    inline float get_cost_factor() const
-    {
-      return cost_factor;
-    }
+   // Getter for cost_factor
+   inline float& get_cost_factor() {
+     return cost_factor;
+   }
+
+
+   // Const getter for cost_factor
+   inline const float& get_cost_factor() const {
+     return cost_factor;
+   }
+
+
+   // Setter for cost_factor
+   inline void set_cost_factor(float cost) {
+     cost_factor = cost;
+   }
+
 
     inline const float& x() const 
     {
