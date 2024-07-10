@@ -141,7 +141,7 @@ namespace octomap {
 #endif
         {
           for(KeyRay::iterator it=keyray->begin(); it != keyray->end(); it++) {
-            updateNode(*it, false, lazy_eval); // insert freespace measurement
+            updateNode(*it, false, 0.0, lazy_eval); // insert freespace measurement
           }
           updateNode(p, true, lazy_eval); // update endpoint to be occupied
         }
@@ -372,7 +372,7 @@ namespace octomap {
     if (!this->coordToKeyChecked(x, y, z, key))
       return NULL;
     // change 0.0 later
-    return updateNode(key, log_odds_update, lazy_eval);
+    return updateNode(key, log_odds_update, 0.0, lazy_eval);
   }
 
   template <class NODE>
@@ -397,7 +397,7 @@ namespace octomap {
     OcTreeKey key;
     if (!this->coordToKeyChecked(x, y, z, key))
       return NULL;
-    return updateNode(key, occupied, lazy_eval);
+    return updateNode(key, occupied, 0.0, lazy_eval);
   }
 
   template <class NODE>
@@ -911,7 +911,7 @@ namespace octomap {
     }
 
     for(KeyRay::iterator it=this->keyrays[0].begin(); it != this->keyrays[0].end(); it++) {
-      updateNode(*it, false, lazy_eval); // insert freespace measurement
+      updateNode(*it, false, 0.0, lazy_eval); // insert freespace measurement
     }
 
     return true;
