@@ -258,7 +258,15 @@ namespace octomap {
      */
     virtual NODE* updateNode(double x, double y, double z, bool occupied, bool lazy_eval = false);
 
-
+    /**
+     * Calculates the cost overlapping between two given trees at a given depth
+     *
+     * @param other_tree tree to be compared with
+     * @param depth
+     * @return double value of overlapping cost
+     */
+    virtual double getOverlappingCost(OccupancyOcTreeBase<NODE>& other_tree, unsigned int depth);
+    
     /**
      * Creates the maximum likelihood map by calling toMaxLikelihood on all
      * tree nodes, setting their occupancy to the corresponding occupancy thresholds.
@@ -485,6 +493,9 @@ namespace octomap {
     void updateInnerOccupancyRecurs(NODE* node, unsigned int depth);
     
     void toMaxLikelihoodRecurs(NODE* node, unsigned int depth, unsigned int max_depth);
+
+    void getOverlappingCostRecurs(NODE* tree1_node, NODE* tree2_node, double& answer, 
+                                unsigned int desired_depth, unsigned int current_depth);
 
 
   protected:

@@ -132,7 +132,7 @@ namespace octomap {
     AbstractOcTreeNode** children;
     /// stored data (payload)
     T occ_val; // occup log value
-    U cost_val; // accumulated cost of children OR (occ log * cost of a point in point cloud) in case of leaf
+    U cost_val; // accumulated cost of children OR (cost of a point in point cloud) in case of leaf
 
   };
 

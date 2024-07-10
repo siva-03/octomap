@@ -144,7 +144,19 @@ int main(int /*argc*/, char** /*argv*/) {
     for (int i=0; i<20; i++){
       tree.insertPointCloud(discretePC, point3d(0, 0, 0), -1, false, true); // Expect 10 cost on terminal
     }
-    
+
+    Pointcloud PC1, PC2;
+
+    PC1.push_back(point3d(163.84,163.84,163.84, 2));
+    PC2.push_back(point3d(-163.84,-163.84,-163.84, 3));
+
+    OcTree tree1(res), tree2(res);
+    for (int i=0; i<20; i++){
+      tree1.insertPointCloud(PC1, point3d(0, 0, 0), -1, false, true); // Expect 10 cost on terminal
+      tree2.insertPointCloud(PC2, point3d(0, 0, 0), -1, false, true); // Expect 10 cost on terminal
+    }
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 0), 6.0);
+
 
     // EXPECT_EQ(2, )
 

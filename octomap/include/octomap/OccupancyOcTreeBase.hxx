@@ -333,6 +333,9 @@ namespace octomap {
     // Cant do this anymore even with added condition where node cost and costfactor is same
     // Because the leaf might be a pruned node with accumulated cost, so we can't check for cost equality.
     // We should calc the leaf cost from pruned node and verify it is equal to cost_factor which is a little complicated
+
+    // This could be done calculated fairly easily depending on the depth difference b/w where the leaf is found and tree-depth
+
     // Sacrificing on efficiency now. Come back later - Siva TODO
     
     // This might be a big sacrifice in case the robot moves only a little and there are a lot of common points 
@@ -417,7 +420,7 @@ namespace octomap {
         // if node_just_created, it won't have any children like a pruned node but it isn't one (corner case)
         if (!this->nodeHasChildren(node) && !node_just_created ) {
           // current node does not have children AND it is not a new node
-          // -> expand pruned node putting 1/8th cost of parent in each child and same occ_prob
+          // -> expand this pruned node putting 1/8th cost of parent in each child and same occ_prob
           this->expandNode(node);
         }
         else {
@@ -471,16 +474,21 @@ namespace octomap {
       } else {
         updateNodeLogOdds(node, log_odds_update);
       }
-      // Update the cost to cost_factor only if it is fully occupied for now TODO
+      // Update the cost to cost_factor only if it is fully occupied
+      // Not considering the cost from occupancy threshold min to max as they are still wavering
+      // There is no cost to consider in unoccupied (< min thres) and in unknown
       if (this->isNodeOccupied(node)){
         node->setCostValue((double)cost_factor);
       }
       else {
+        // this makes sure, if the occupancy status changes from occupied to anything else, it updates cost to 0
         node->setCostValue(0.0);
       }
       return node;
     }
   }
+
+
 
   // TODO: mostly copy of updateNodeRecurs => merge code or general tree modifier / traversal
   template <class NODE>
@@ -568,6 +576,82 @@ namespace octomap {
       }
       node->updateOccupancyChildren();
     }
+  }
+
+  template<class NODE>
+  double OccupancyOcTreeBase<NODE>::getOverlappingCost(OccupancyOcTreeBase<NODE>& other_tree, unsigned int depth){
+    
+    // It is efficient to call this on the sparse tree (robot) passing in the dense tree (environment)
+
+    double ans = 0.0;
+    if (!other_tree.root){
+      return ans;
+    }
+    if (!this->root){
+      return ans;
+    }
+    
+    assert(this->resolution == other_tree.resolution);
+    assert(this->tree_max_val == other_tree.tree_max_val);
+    assert(this->tree_depth == other_tree.tree_depth);
+    assert(depth <= this->tree_depth);
+
+    getOverlappingCostRecurs(this->root, other_tree.root, ans, depth, 0);
+    return ans;
+  }
+
+  template<class NODE>
+  void OccupancyOcTreeBase<NODE>::getOverlappingCostRecurs(NODE* tree1_node, NODE* tree2_node, double& answer, 
+                                unsigned int desired_depth, unsigned int current_depth){
+    // This function should recursively crawl both trees in tandem multiplying the costs
+    // of tree1_node and tree2_node when they represent the same physical space.
+
+    if (!tree1_node || !tree2_node){
+      // One of the nodes is NULL. There is no point in going into the subtree for the non-NULL node
+      // Because regardless of the costs in one tree, the overlap cost is zero because of NULL
+      return;
+    }
+
+    if (tree1_node->getCostValue() == 0.0 || tree2_node->getCostValue() == 0.0){
+      // If alteast one of these cost values is zero, then all the subtree costs are zero as costs cant be negative
+      // So that will lead to a zero overlapping cost
+      return;
+    }
+
+    if (current_depth == desired_depth){
+      // We are at the desired depth. Get the non-zero cost to be added
+      // return after this as we don't need the levels below the depth given
+      answer += tree1_node->getCostValue() * tree2_node->getCostValue();
+      std::cout << "cost1: " << tree1_node->getCostValue() << " ";
+      std::cout << "cost2: " << tree2_node->getCostValue() << " ";
+      std::cout << "answer: " << answer << " " << std::endl;
+      return;
+    }
+
+    if (current_depth == this->tree_depth){
+      // We are at the lowest level. Nothing more to pursue
+      return;
+    }
+
+    // Start pursuing children recursively.
+    //If any of these two nodes is a pruned node, expand them
+    if (!this->nodeHasChildren(tree1_node)){
+      this->expandNode(tree1_node);
+    }
+    if (!this->nodeHasChildren(tree2_node)){
+      this->expandNode(tree2_node);
+    }
+    for(unsigned int i=0; i<8; i++){
+      // Check if both these nodes have a child that correspondond to the same physical space
+      if(this->nodeChildExists(tree1_node, i) && this->nodeChildExists(tree2_node, i)){
+        // recursively solve the problem on the corresponding children
+        getOverlappingCostRecurs(this->getNodeChild(tree1_node, i), this->getNodeChild(tree2_node, i), answer, 
+                                desired_depth, current_depth + 1);
+      }
+    }
+    // Once we are done prune back the nodes that we expanded to not change the tree and maintainn memory efficiency
+    this->pruneNode(tree1_node);
+    this->pruneNode(tree2_node);
   }
 
   template <class NODE>
