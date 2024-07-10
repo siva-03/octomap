@@ -149,6 +149,7 @@ int main(int /*argc*/, char** /*argv*/) {
 
     PC1.push_back(point3d(163.84,163.84,163.84, 2));
     PC2.push_back(point3d(-163.84,-163.84,-163.84, 3));
+    // These points fall in the same voxel grid only on depth 0.
 
     OcTree tree1(res), tree2(res);
     for (int i=0; i<20; i++){
@@ -156,6 +157,11 @@ int main(int /*argc*/, char** /*argv*/) {
       tree2.insertPointCloud(PC2, point3d(0, 0, 0), -1, false, true); // Expect 10 cost on terminal
     }
     EXPECT_EQ(tree1.getOverlappingCost(tree2, 0), 6.0);
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 1), 0.0);
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 2), 0.0);
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 3), 0.0);
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 4), 0.0);
+    EXPECT_EQ(tree1.getOverlappingCost(tree2, 5), 0.0);
 
 
     // EXPECT_EQ(2, )
